@@ -1,109 +1,19 @@
 version: 2.1
 
 orbs:
-  slack: circleci/slack@4.10.1  # Slack Orb 추가
-
-executors:
-  default-executor:
-    docker:
-      - image: cimg/node:18.0
-    working_directory: /home/circleci/project
+  node: circleci/node@x.y
 
 jobs:
-  build:
-    executor: default-executor
+  install-node-example:
+    docker:
+      - image: cimg/base:stable
     steps:
       - checkout
-      - run:
-          name: Check Directory Structure
-          command: |
-            echo "Current Directory:"
-            pwd
-            echo "Contents:"
-            ls -al
-      - run:
-          name: Install front Dependencies
-          command: |
-            cd front
-            npm install
-      - run:
-          name: Install back Dependencies
-          command: |
-            cd back
-            npm install
-
-  build-and-push-front:
-    executor: default-executor
-    steps:
-      - setup_remote_docker
-      - checkout
-      - run:
-          name: Install AWS CLI
-          command: |
-            sudo apt-get update
-            sudo apt-get install awscli -y
-      - run:
-          name: Authenticate with ECR front
-          command: |
-            echo "Authenticate to Frontend ECR"
-            echo "Region : $AWS_REGION"
-            echo "ECR_URL: $ECR URL: $AWS_ECR_FRONT_URL"
-            aws ecr get-login-password --region $AWS_REGION | \
-            docker login --username AWS --password-stdin $AWS_ECR_FRONT_URL || exit 1
-      - run:
-          name: Build and Push Front-end Image
-          command: |
-            cd front
-            docker build -t front:2.0 .
-            docker tag front:2.0 $AWS_ECR_FRONT_URL:2.0
-            docker push $AWS_ECR_FRONT_URL:2.0
-      - slack/notify:
-          event: fail
-          template: basic_fail_1
-      - slack/notify:
-          event: pass
-          template: basic_success_1
-
-
-  build-and-push-back:
-    executor: default-executor
-    steps:
-      - setup_remote_docker
-      - checkout
-      - run:
-          name: Install AWS CLI
-          command: |
-            sudo apt-get update
-            sudo apt-get install awscli -y
-      - run:
-          name: Authenticate with ECR front
-          command: |
-            echo "Authenticate to Frontend ECR"
-            echo "Region : $AWS_REGION"
-            echo "ECR_URL: $ECR URL: $AWS_ECR_FRONT_URL"
-            aws ecr get-login-password --region $AWS_REGION | \
-            docker login --username AWS --password-stdin $AWS_ECR_BACK_URL || exit 1
-      - run:
-          name: Build and Push Front-end Image
-          command: |
-            cd back
-            docker build -t back:2.0 .
-            docker tag back:2.0 $AWS_ECR_BACK_URL:2.0
-            docker push $AWS_ECR_BACK_URL:2.0
-      - slack/notify:
-          event: fail
-          template: basic_fail_1
-      - slack/notify:
-          event: pass
-          template: basic_success_1
-
-
-
+      - node/install:
+          install-yarn: true
+          node-version: '16.13'
+      - run: node --version
 workflows:
-  version: 2
-  build-and-deploy:
+  test_my_app:
     jobs:
-      - build
-      - build-and-push-front
-      - build-and-push-back
-
+      - install-node-example
